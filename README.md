@@ -34,7 +34,7 @@ If you find a bug, please open an issue on GitHub.
 
 ## 1. Decompile your Sonic 2 APK
 
-Use APKTool to decompile your own APK.
+Use unzip the get the files of your own APK.
 
 Find:
 
