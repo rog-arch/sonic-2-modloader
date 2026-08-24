@@ -162,3 +162,10 @@ You must obtain the game yourself and apply the modifications to your own copy.
 This project is a WIP and is provided for experimentation and modding development.
 
 If you find bugs or want to help improve the code, email me: [githubemail.possibly978@passinbox.com](mailto:githubemail.possibly978@passinbox.com)
+
+
+## things
+
+The app needs root and for now it makes a file called hello world so it talks with android just fine
+
+The app (patch) still doesnt talk with the game, Will be fixed in a later ver
