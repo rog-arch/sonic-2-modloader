@@ -1,5 +1,7 @@
 # sonic-2-modloader
 
+"WARNING: THIS NEEDS YOU TO HAVE LINUX OR MAC OS IF IT WORKS ON THERE WINDOWS IS NOT SUPPORTED WSL CAN WORK BUT IT IS NOT RECOMMEND why you may ask to build the game! not to run it. "
+
 HELLO!
 
 This is a **WIP Sonic 2 modloader project**.
