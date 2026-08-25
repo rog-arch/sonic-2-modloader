@@ -8,7 +8,7 @@ This is a **WIP Sonic 2 modloader project**.
 
 You need to provide your **own legally obtained Sonic 2 APK**. The Sonic 2 APK is **not included in this repository**.
 
-We are currently working with **Sonic 2 version 2.40**. " GET 2.40 IF YOU WANT THIS TO WORK WITH NO ERRORS IF YO DONT WANT TO ASK ME FOR A PREBUILT APK USING THE EMAIL DOWN THERE "
+We are currently working with **Sonic 2 version 2.40**. " GET 2.40 IF YOU WANT THIS TO WORK WITH NO ERRORS IF YOU DONT WANT TO, ASK ME FOR A PREBUILT APK USING THE EMAIL DOWN THERE "
 
 The main goal is pretty simple:
 
