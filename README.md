@@ -4,168 +4,283 @@ HELLO!
 
 This is a **WIP Sonic 2 modloader project**.
 
-You will need to provide **your own legally obtained Sonic 2 APK**. The Sonic 2 APK is **not included** in this repository.
+You need to provide your **own legally obtained Sonic 2 APK**. The Sonic 2 APK is **not included in this repository**.
 
-The current version works by injecting the mod initialization code into `Sonic2Activity.smali`.
+We are currently working with **Sonic 2 version 2.40**.
 
-## What works
+The main goal is pretty simple:
 
-* The injected code runs when the game starts
-* The mod code can communicate with Android
-* The mod code can create files
-* The game continues running normally
-* Code can draw things on the screen
-* ARM64 currently works on Waydroid
+**make our own modloader and figure out how to get it talking to the actual game.**
 
-## What doesn't work yet
+We tried using `setGlobalVariable` before, but we couldn't figure out how it actually worked, so instead of spending forever guessing, we're making our own system.
 
-Nothing currently known to be broken with the basic test.
+# What works right now
 
-If you find a bug, please open an issue on GitHub.
+A surprising amount, actually.
 
-## What's not done
+* The modloader starts
+* `ModAPI` initializes
+* `ModAPI.tick()` runs continuously
+* Our code can talk to Android
+* Our code can create files
+* Our code can draw things on the screen
+* Sonic 2 keeps running normally
+* ARM64 works on Waydroid
+* Sonic 2 version 2.40 works with our current setup
+* We can see the modloader running through logcat
 
-* Modloader is still a work in progress
-* ModAPI is still a work in progress
-* Lua support isn't implemented yet
-* Other architectures/configurations aren't supported yet for me it may work for you if you dont be a idiot and somehow find a split apk
-
-# Injecting the Modloader
-
-## 1. Decompile your Sonic 2 APK
-
-Use unzip the get the files of your own APK.
-
-Find:
+For example:
 
 ```text
-Sonic2Activity.smali
+Sonic2Mod: ModAPI initialized
+Sonic2Mod: Created hello_world.txt
 ```
 
-It should be located somewhere similar to:
+And our tick function keeps running:
 
 ```text
-smali_classes2/com/sega/sonic2px/Sonic2Activity.smali
+Sonic2Mod: ModAPI tick
+Sonic2Mod: ModAPI tick
+Sonic2Mod: ModAPI tick
 ```
 
-## 2. Find the injection point
+So yeah, the modloader is definitely alive.
 
-Open `Sonic2Activity.smali` and search for:
+# How it works right now
 
-```smali
-invoke-virtual {v0, v5}, Lcom/sega/sonic2px/Sonic2View;->setKeepScreenOn(Z)V
-```
-
-Immediately underneath that line, insert:
-
-```smali
-# ===== MOD TEST =====
-
-new-instance v0, Lcom/sega/sonic2px/mod/ModTestView;
-
-invoke-direct {v0, p0}, Lcom/sega/sonic2px/mod/ModTestView;-><init>(Landroid/content/Context;)V
-
-new-instance v1, Landroid/view/ViewGroup$LayoutParams;
-
-const/4 v2, -0x1
-
-const/4 v3, -0x1
-
-invoke-direct {v1, v2, v3}, Landroid/view/ViewGroup$LayoutParams;-><init>(II)V
-
-invoke-virtual {p0, v0, v1}, Landroid/app/Activity;->addContentView(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V
-
-# ===== END MOD TEST =====
-```
-
-## 3. Add the mod code
-
-Copy the project's `mod` package into:
+The current setup is basically:
 
 ```text
-smali_classes2/com/sega/sonic2px/
+Sonic 2
+   ↓
+Sonic2Render / RetroEngine
+   ↓
+our modloader
+   ↓
+ModAPI
+   ↓
+our code
 ```
 
-You should end up with something similar to:
+The Android side is working.
+
+The annoying part is that our code still needs to actually **talk to the game's engine**.
+
+That's the part we're working on now.
+
+# ModAPI
+
+The ModAPI is going to be the thing mods use instead of having to mess with the game's internals themselves.
+
+Right now it's extremely basic.
+
+We have:
 
 ```text
-smali_classes2/
-└── com/
-    └── sega/
-        └── sonic2px/
-            ├── Sonic2Activity.smali
-            ├── Sonic2View.smali
-            └── mod/
-                ├── ModAPI.smali
-                └── ModTestView.smali
+ModAPI.tick()
 ```
 
-The injected code expects:
+which gets called while the game is running.
+
+We're using this for testing right now, mainly to make sure the API isn't randomly dying somewhere.
+
+Eventually this is where things like player information, game state, objects, and other game stuff will live.
+
+The API is still being designed, so don't expect the names or functions to stay exactly the same.
+
+# Talking to the actual game
+
+This is the big one.
+
+We found the game's native library:
 
 ```text
-com.sega.sonic2px.mod.ModTestView
+lib/arm64-v8a/libRetroEngineJNI.so
 ```
 
-so the package/folder structure needs to remain correct.
+and started digging through it.
 
-# Building
+While looking around, we found some interesting strings:
 
-## Requirements
+```text
+player.lives
+player.score
+player.scoreBonus
+```
 
-You will need:
+For example:
+
+```text
+446fd5 player.lives
+446fe2 player.score
+446fef player.scoreBonus
+```
+
+We also found things like:
+
+```text
+ProcessPlayerControl
+ProcessPlayerTileCollisions
+SetPlayerScreenPosition
+SetPlayerLockedScreenPosition
+```
+
+This is useful because it gives us places to start looking.
+
+However, finding a string called `player.lives` **doesn't mean we've found the lives variable itself**.
+
+It's just a string sitting in the binary.
+
+The next step is finding the native code that uses it and figuring out how the engine actually stores and accesses that data.
+
+Once we understand that, our API can actually communicate with the game instead of just talking to Android.
+
+# Lua
+
+Lua isn't implemented yet.
+
+That's coming later.
+
+The idea is that Lua mods will use our ModAPI instead of directly poking around inside the native library.
+
+Something like this eventually:
+
+```lua
+local lives = Player.getLives()
+
+Player.setLives(99)
+```
+
+But that's future stuff.
+
+Right now we're still working on the much more important problem of:
+
+**HOW THE HELL DO WE TALK TO THE GAME?**
+
+# Current test
+
+For now, the modloader creates:
+
+```text
+hello_world.txt
+```
+
+when it starts.
+
+This isn't meant to be some amazing feature.
+
+It's just a really easy way to prove:
+
+> yep, our code actually ran.
+
+We also have the log output from `ModAPI.tick()` to prove that the API keeps running.
+
+# What's still missing
+
+There's still a lot to do.
+
+* Game ↔ ModAPI communication
+* Reading game variables
+* Changing game variables
+* Proper ModAPI
+* Lua support
+* Lua ↔ ModAPI communication
+* Proper mod loading
+* More architectures
+* More APK configurations
+
+Other architectures/configurations **might work for you**.
+
+If you somehow get a split APK or another setup working, good for you because I haven't tested every possible configuration.
+
+# Requirements
+
+For the current setup you'll need:
 
 * APKTool
 * ADB
 * `zipalign`
 * `apksigner`
+* An ARM64 Android/Waydroid environment
+* Sonic 2 version 2.40
+* Root access for the current setup
 
-### Build the APK
+# Building
+
+Build the APK:
 
 ```bash
 apktool b sonic2-apktool \
     -o sonic2-mod-test-unsigned.apk
+```
 
+Align it:
+
+```bash
 zipalign -f -p 4 \
     sonic2-mod-test-unsigned.apk \
     sonic2-mod-test-aligned.apk
+```
 
+Sign it:
+
+```bash
 apksigner sign \
     --ks "YOUR_SIGN_KEY" \
     --out sonic2-mod-test.apk \
     sonic2-mod-test-aligned.apk
 ```
 
-**Do not upload your keystore or keystore password to GitHub.**
+**DO NOT upload your keystore or keystore password to GitHub.**
 
-## Installing on Waydroid
+Seriously.
 
-install the modified APK:
+# Installing on Waydroid
+
+Install it with:
 
 ```bash
 adb install sonic2-mod-test.apk
 ```
 
-If your Waydroid installation does not allow incremental installation, use:
+If incremental installation causes problems:
 
 ```bash
 adb install --no-incremental sonic2-mod-test.apk
 ```
 
-For split APK installations, use `adb install-multiple --no-incremental` with the APKs required by your configuration.
+For split APKs, you'll need to use:
 
-## Important
+```bash
+adb install-multiple --no-incremental
+```
 
-This project does **not** distribute the Sonic 2 APK.
+with the APKs your installation actually needs.
 
-You must obtain the game yourself and apply the modifications to your own copy.
+# Important
 
-This project is a WIP and is provided for experimentation and modding development.
+This repository does **not** contain the Sonic 2 APK or other proprietary game files.
 
-If you find bugs or want to help improve the code, email me: [githubemail.possibly978@passinbox.com](mailto:githubemail.possibly978@passinbox.com)
+You need to get the game yourself and work with your own copy.
 
+The repository is for the **modloader code, ModAPI, Lua system, and other development code**.
 
-## things
+We're still figuring a lot of this out, so things will probably break.
 
-The app needs root and for now it makes a file called hello world so it talks with android just fine
+That's kinda the point.
 
-The app (patch) still doesnt talk with the game, Will be fixed in a later ver
+If you find a bug or want to help with the project, (or want a premade apk), email me:
+
+[githubemail.possibly978@passinbox.com](mailto:githubemail.possibly978@passinbox.com)
+
+# Status
+
+**VERY MUCH A WORK IN PROGRESS**
+
+The modloader can run.
+
+The API can run.
+
+Android communication works.
+
+Now we just need to make the damn thing talk to Sonic 2.
